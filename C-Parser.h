@@ -54,6 +54,38 @@ string token2Str[28] = {
 
 vector<vector<token>> First;
 
+void BuildFirstSet() {
+	First[declaration_list] = { INT,VOID };
+	First[declaration] = { INT,VOID };
+	First[var_declaration] = { INT,VOID };
+	First[var_tail] = { SEMI_COLON, SLB };
+	First[type_specifier] = { INT, VOID };
+	First[fun_declaration] = { INT, VOID };
+	First[params] = { INT, VOID };
+	First[param_list] = { INT, VOID };
+	First[param] = { INT, VOID };
+	First[compound_stmt] = { CLB };
+	First[local_declarations] = { EMPTY };
+	First[statement_list] = { EMPTY };
+	First[statement] = { LET,LB,ID,NUM,SEMI_COLON,IF,WHILE,CLB,RETURN };
+	First[expression_stmt] = { LET,LB,ID,NUM,SEMI_COLON };
+	First[selection_stmt] = { IF };
+	First[iteration_stmt] = { WHILE };
+	First[return_stmt] = { RETURN };
+	First[expression] = { LET,LB,ID,NUM };
+	First[var] = { ID };
+	First[simple_expression] = { LB,ID, NUM };
+	First[relop] = { LTE, LT, BT, BTE, EQ, NEQ, ASSIGN };
+	First[additive_expression] = { LB, ID, NUM };
+	First[addop] = { ADDOP };
+	First[term] = { LB, ID, NUM };
+	First[mulop] = { MULOP };
+	First[factor] = { LB, ID, NUM };
+	First[call] = { ID };
+	First[args] = { LET, LB, ID, NUM, EMPTY };
+	First[arg_list] = { LET,LB,ID,NUM };
+}
+
 
 class SyntaxAnalyzer {
 
@@ -68,8 +100,6 @@ private:
 	token currToken;
 	vector<vector<token>> First;
 	bool error;
-	void BuildFirstSet();
-
 
 	/**** Procedures ***/
 	node* program();
@@ -121,6 +151,7 @@ public:
 	void traverse();
 };
 
+
 SyntaxAnalyzer::SyntaxAnalyzer(token tokens[], int size) {
 	ptr = 0;
 	error = false;
@@ -133,39 +164,6 @@ SyntaxAnalyzer::SyntaxAnalyzer(token tokens[], int size) {
 
 SyntaxAnalyzer::~SyntaxAnalyzer() {
 	delete[] tokens;
-}
-
-void SyntaxAnalyzer::BuildFirstSet()
-{
-	First[nonTerm::declaration_list] = { INT,VOID };
-	First[nonTerm::declaration] = { INT,VOID };
-	First[nonTerm::var_declaration] = { INT,VOID };
-	First[nonTerm::var_tail] = { SEMI_COLON, SLB };
-	First[nonTerm::type_specifier] = { INT, VOID };
-	First[nonTerm::fun_declaration] = { INT, VOID };
-	First[nonTerm::params] = { INT, VOID };
-	First[nonTerm::param_list] = { INT, VOID };
-	First[nonTerm::param] = { INT, VOID };
-	First[nonTerm::compound_stmt] = { CLB };
-	First[nonTerm::local_declarations] = { EMPTY };
-	First[nonTerm::statement_list] = { EMPTY };
-	First[nonTerm::statement] = { LET,LB,ID,NUM,SEMI_COLON,IF,WHILE,CLB,RETURN };
-	First[nonTerm::expression_stmt] = { LET,LB,ID,NUM,SEMI_COLON };
-	First[nonTerm::selection_stmt] = { IF };
-	First[nonTerm::iteration_stmt] = { WHILE };
-	First[nonTerm::return_stmt] = { RETURN };
-	First[nonTerm::expression] = { LET,LB,ID,NUM };
-	First[nonTerm::var] = { ID };
-	First[nonTerm::simple_expression] = { LB,ID, NUM };
-	First[nonTerm::relop] = { LTE, LT, BT, BTE, EQ, NEQ, ASSIGN };
-	First[nonTerm::additive_expression] = { LB, ID, NUM };
-	First[nonTerm::addop] = { ADDOP };
-	First[nonTerm::term] = { LB, ID, NUM };
-	First[nonTerm::mulop] = { MULOP };
-	First[nonTerm::factor] = { LB, ID, NUM };
-	First[nonTerm::call] = { ID };
-	First[nonTerm::args] = { LET, LB, ID, NUM, EMPTY };
-	First[nonTerm::arg_list] = { LET,LB,ID,NUM };
 }
 
 bool SyntaxAnalyzer::create() {
@@ -204,9 +202,10 @@ void SyntaxAnalyzer::traverse(node* ptr) {
 	}
 }
 
-token SyntaxAnalyzer::check(nonTerm nT)
-{
-	for (int i = 0; i < First[nT].size; i++) if (First[nT][i] == currToken) return currToken;
+token SyntaxAnalyzer::check(nonTerm nT) {
+	for (int i = 0; i < First[nT].size(); i++)
+		if (First[nT][i] == currToken)
+			return currToken;
 	return token::$;
 }
 
@@ -224,9 +223,7 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::program() {
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::declaration_list() {
 	node* left = declaration();
-	// TODO: while declaration
-	while (currToken == check(nonTerm::declaration))
-	{
+	while (currToken ==	check(nonTerm::declaration)) {
 		string op = token2Str[currToken];
 		node* right = declaration();
 		left = new node(op, left, right);
@@ -234,12 +231,149 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::declaration_list() {
 	return left;
 }
 
-//node* var_declaration();
-//node* var_tail();
-//node* type_specifier();
-//node* fun_declaration();
-//node* params();
-//node* param_list();
+SyntaxAnalyzer::node* SyntaxAnalyzer::declaration() {
+	node* left = nullptr;
+	if (currToken == check(nonTerm::type_specifier)) {
+		if(currToken.next.next == check(nonTerm::var_tail))
+			left = type_specifier();
+		if(currToken.next.next == LB)
+			left = fun_declaration();
+	}
+	else {
+		syntaxError(currToken);
+	}
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::var_declaration() {
+	node* left = type_specifier();
+	match(ID);
+	node* right = var_tail();
+	left = new node(token2Str[ID], left, right);
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::var_tail() {
+	switch (currToken) {
+	case SEMI_COLON:
+		match(SEMI_COLON);
+		break;
+	case SLB:
+		match(SLB);
+		match(NUM);
+		match(SRB);
+		break;
+	default:
+		syntaxError(SEMI_COLON);
+		break;
+	}
+
+	return new node(token2Str[currToken], nullptr, nullptr);
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::type_specifier() {
+	switch (currToken) {
+	case INT: match(INT); break;
+	case VOID: match(VOID); break;
+	default:
+		syntaxError(INT);
+		return NULL;
+		break;
+	}
+	return new node(token2Str[currToken], nullptr, nullptr);
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::fun_declaration() {
+	node* left = type_specifier();
+	match(ID);
+	match(LB);
+	node* right = params();
+	match(RB);
+	node* el = compound_stmt();
+	node* right = new node(token2Str[ID], el, right);
+	left = new node(token2Str[ID], left, right);
+
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::params() {
+	node* left;
+	if (currToken == check(nonTerm::param_list)) left = param_list();
+	else { match(VOID); left = new node(token2Str[VOID], NULL, NULL); }
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::param_list(){
+	node* left = param();
+	while (currToken == COMMA)
+	{
+		match(COMMA);
+		node* right = param();
+		left = new node(token2Str[COMMA], left, right);
+	}
+
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::param() {
+	node* left = type_specifier();
+	match(ID);
+	if (currToken == SLB)
+	{
+		match(SLB);
+		match(SRB);
+	}
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::compound_stmt(){
+	match(CLB);
+	node* left = local_declarations();
+	node* right = statement_list();
+	match(CRB);
+	left = new node(token2Str[CLB], left, right);
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::local_declarations() {
+	match(EMPTY);
+	node* left;
+	while (currToken == check(nonTerm::var))
+	{
+		token tok = currToken;
+		left = var();
+		node* right = declaration();
+		left = new node(token2Str[tok], left, right);
+	}
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::statement_list() {
+	match(EMPTY);
+	node* left;
+	while (currToken == check(nonTerm::statement))
+	{
+		token tok = currToken;
+		left = statement();
+	}
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::statement() {
+	match(EMPTY);
+	node* left;
+	if (currToken == check(nonTerm::expression_stmt)) left = expression_stmt();
+	else if (currToken == check(nonTerm::compound_stmt)) left = compound_stmt();
+	else if (currToken == check(nonTerm::selection_stmt)) left = selection_stmt();
+	else if (currToken == check(nonTerm::iteration_stmt)) left = iteration_stmt();
+	else if (currToken == check(nonTerm::return_stmt)) left = return_stmt();
+
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::expression_stmt() {
+	node* left;
+	if (currToken == check(nonTerm::expression)) left = expression();
+	match(SEMI_COLON);
+	return left;
+}
+
+
 
 /**** Procedures 16 ----> 30***/
 SyntaxAnalyzer::node* SyntaxAnalyzer::selection_stmt() {
@@ -249,15 +383,16 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::selection_stmt() {
 	node* exprptr = expression();
 	match(CRB);
 	node* thenptr = statement();
-	if (currToken == ELSE)
-	{
+	if (currToken == ELSE) {
 		match(ELSE);
 		node* elseptr = new node("ELSE", thenptr, elseptr);
 		ifptr = new node("IF", exprptr, elseptr);
 	}
-	else ifptr = new node("IF", exprptr, thenptr);
+	else
+		ifptr = new node("IF", exprptr, thenptr);
 	return ifptr;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::iteration_stmt() {
 	match(WHILE);
 	match(CLB);
@@ -267,31 +402,42 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::iteration_stmt() {
 	node* whileptr = new node("WHILE", exprptr, stmtptr);
 	return whileptr;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::return_stmt() {
 	match(RETURN);
 	node* ptr;
-	if(currToken == check(nonTerm::expression)) ptr = expression();
+	if (currToken == check(nonTerm::expression))
+		ptr = expression();
 	match(SEMI_COLON);
 	return ptr;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::expression() {
-	node* ptr;
-	if (currToken == LET) match(SEMI_COLON);
-	else if (currToken == check(nonTerm::simple_expression))
-	{
-		ptr = expression();
-		match(SEMI_COLON);
+	node* left;
+	if (currToken == LET) {
+		match(LET);
+		left = var();
+		match(ASSIGN);
+		node* el = expression();
+		left = new node(token2Str[ASSIGN], left, el);
 	}
-	return ptr;
+	else if (currToken == check(nonTerm::simple_expression)) {
+		left = simple_expression();
+	}
+	else syntaxError($);
+	return left;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::var() {
 	match(ID);
 	node* ptr;
 	switch (currToken) {
-	case LB: {  match(LB); ptr = expression(); match(RB); break; return ptr; }
+	case LB: { match(LB); ptr = expression(); match(RB); break; }
 	default: syntaxError(LB);
 	}
+	return ptr;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::simple_expression() {
 	node* left = additive_expression();
 	node* right;
@@ -299,11 +445,12 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::simple_expression() {
 	{
 		node* el = relop();
 		right = additive_expression();
-		node* el = new node(token2Str[currToken], el, right);
+		right = new node(token2Str[currToken], el, right);
 		left = new node(token2Str[currToken], left, right);
 	}
 	return left;
 }
+
 SyntaxAnalyzer::node* SyntaxAnalyzer::relop() {
 	switch (currToken)
 	{
@@ -318,13 +465,76 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::relop() {
 		//Expected relop
 	}
 }
-//node* additive_expression();
-//node* addop();
-//node* term();
-//node* mulop();
-//node* factor();
-//node* call();
-//node* args();
-//node* arg_list();
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::additive_expression() {
+	node* left = term();
+	node* right;
+	while (currToken == check(nonTerm::addop))
+	{
+		token tok = currToken;
+		node* el = addop();
+		right = term();
+		node* right = new node(token2Str[tok], el, right);
+		left = new node(token2Str[tok], left,  right);
+	}
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::mulop() {
+	switch (currToken)
+	{
+	case ADDOP: match(ADDOP); break;
+	default:
+		//Expected relop
+	}
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::term() {
+	node* left = factor();
+	node* right;
+	while (currToken == check(nonTerm::mulop))
+	{
+		token tok = currToken;
+		right = factor();
+		left = new node(token2Str[tok], left, right);
+	}
+	return left;
+}
+
+SyntaxAnalyzer::node* SyntaxAnalyzer::factor() {
+	node* left;
+	node* right;
+	switch (currToken)
+	{
+	case LB: {
+		match(LB);
+		node* exprptr = expression();
+		match(RB);
+	}; break;
+	case ID: if (scout == LB) left = call(); else left = var(); break;
+	case NUM: match(NUM); break;
+	}
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::call() {
+	match(ID);
+	match(LB);
+	node* left = args();
+	match(RB);
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::args() {
+	node* left;
+	if (currToken == check(nonTerm::arg_list)) left = arg_list();
+	else match(EMPTY);
+	return left;
+}
+SyntaxAnalyzer::node* SyntaxAnalyzer::arg_list() {
+	node* left = expression();
+	while (currToken == COMMA) {
+		match(COMMA);
+		node* right = expression();
+		left = new node(token2Str[COMMA], left, right);
+	}
+	return left;
+}
 
 #endif /* C_Parser_h */

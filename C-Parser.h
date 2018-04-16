@@ -54,43 +54,6 @@ string token2Str[28] = {
 
 vector<vector<token>> First;
 
-void BuildFirstSet()
-{
-	First[declaration_list] = { INT,VOID };
-	First[declaration] = { INT,VOID };
-	First[var_declaration] = { INT,VOID };
-	First[var_tail] = { SEMI_COLON, SLB };
-	First[type_specifier] = { INT, VOID};
-	First[fun_declaration] = { INT, VOID };
-	First[params] = { INT, VOID };
-	First[param_list] = { INT, VOID };
-	First[param] = { INT, VOID };
-	First[compound_stmt] = { CLB };
-	First[local_declarations] = { EMPTY };
-	First[statement_list] = { EMPTY };
-	First[statement] = { LET,LB,ID,NUM,SEMI_COLON,IF,WHILE,CLB,RETURN};
-	First[expression_stmt] = { LET,LB,ID,NUM,SEMI_COLON};
-	First[selection_stmt] = { IF };
-	First[iteration_stmt] = { WHILE };
-	First[return_stmt] = { RETURN };
-	First[expression] = { LET,LB,ID,NUM};
-	First[var] = { ID };
-	First[simple_expression] = { LB,ID, NUM};
-	First[relop] = { LTE, LT, BT, BTE, EQ, NEQ, ASSIGN };
-	First[additive_expression] = { LB, ID, NUM};
-	First[addop] = {ADDOP};
-	First[term] = { LB, ID, NUM};
-	First[mulop] = { MULOP};
-	First[factor] = { LB, ID, NUM};
-	First[call] = { ID };
-	First[args] = { LET, LB, ID, NUM, EMPTY};
-	First[arg_list] = { LET,LB,ID,NUM };
-
-
-
-
-}
-
 
 class SyntaxAnalyzer {
 
@@ -157,38 +120,7 @@ public:
 	bool create();
 	void traverse();
 };
-void SyntaxAnalyzer::BuildFirstSet()
-{
-	First[nonTerm::declaration_list] = { INT,VOID };
-	First[nonTerm::declaration] = { INT,VOID };
-	First[nonTerm::var_declaration] = { INT,VOID };
-	First[nonTerm::var_tail] = { SEMI_COLON, SLB };
-	First[nonTerm::type_specifier] = { INT, VOID };
-	First[nonTerm::fun_declaration] = { INT, VOID };
-	First[nonTerm::params] = { INT, VOID };
-	First[nonTerm::param_list] = { INT, VOID };
-	First[nonTerm::param] = { INT, VOID };
-	First[nonTerm::compound_stmt] = { CLB };
-	First[nonTerm::local_declarations] = { EMPTY };
-	First[nonTerm::statement_list] = { EMPTY };
-	First[nonTerm::statement] = { LET,LB,ID,NUM,SEMI_COLON,IF,WHILE,CLB,RETURN };
-	First[nonTerm::expression_stmt] = { LET,LB,ID,NUM,SEMI_COLON };
-	First[nonTerm::selection_stmt] = { IF };
-	First[nonTerm::iteration_stmt] = { WHILE };
-	First[nonTerm::return_stmt] = { RETURN };
-	First[nonTerm::expression] = { LET,LB,ID,NUM };
-	First[nonTerm::var] = { ID };
-	First[nonTerm::simple_expression] = { LB,ID, NUM };
-	First[nonTerm::relop] = { LTE, LT, BT, BTE, EQ, NEQ, ASSIGN };
-	First[nonTerm::additive_expression] = { LB, ID, NUM };
-	First[nonTerm::addop] = { ADDOP };
-	First[nonTerm::term] = { LB, ID, NUM };
-	First[nonTerm::mulop] = { MULOP };
-	First[nonTerm::factor] = { LB, ID, NUM };
-	First[nonTerm::call] = { ID };
-	First[nonTerm::args] = { LET, LB, ID, NUM, EMPTY };
-	First[nonTerm::arg_list] = { LET,LB,ID,NUM };
-}
+
 SyntaxAnalyzer::SyntaxAnalyzer(token tokens[], int size) {
 	ptr = 0;
 	error = false;
@@ -293,7 +225,7 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::program() {
 SyntaxAnalyzer::node* SyntaxAnalyzer::declaration_list() {
 	node* left = declaration();
 	// TODO: while declaration
-	while (find(nonTerm::declaration))
+	while (currToken == check(nonTerm::declaration))
 	{
 		string op = token2Str[currToken];
 		node* right = declaration();

@@ -79,7 +79,7 @@ void BuildFirstSet() {
 	First[iteration_stmt] = { WHILE };
 	First[return_stmt] = { RETURN };
 	First[expression] = { LET,LB,ID,NUM };
-	First[var] = { ID };
+	First[var] = { EMPTY, SLB };
 	First[simple_expression] = { LB,ID, NUM };
 	First[relop] = { LTE, LT, BT, BTE, EQ, NEQ, ASSIGN };
 	First[additive_expression] = { LB, ID, NUM };
@@ -87,7 +87,7 @@ void BuildFirstSet() {
 	First[term] = { LB, ID, NUM };
 	First[mulop] = { MULOP };
 	First[factor] = { LB, ID, NUM };
-	First[call] = { ID };
+	First[call] = { LB };
 	First[args] = { LET, LB, ID, NUM, EMPTY };
 	First[arg_list] = { LET,LB,ID,NUM };
 }
@@ -454,11 +454,11 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::expression() {
 }
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::var() {
+	symbol prevToken = currToken;
 	match(ID);
-	node* ptr = nullptr;
+	node* ptr = new node(prevToken.value, nullptr, nullptr);
 	switch (currToken.tok) {
-	case SLB: { match(SLB); ptr = expression(); match(SRB); break; }
-	default: syntaxError("(");
+	case SLB: { match(SLB); ptr = new node("[]",ptr,expression()); match(SRB); break; }
 	}
 	return ptr;
 }
@@ -539,7 +539,7 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::factor() {
 		left = expression();
 		match(RB);
 	}; break;
-	case ID: if (check(nonTerm::var)) left = var(); else left = call(); break;
+	case ID: if (check(nonTerm::call)) left = call(); else left = var(); break;
 	case NUM: {
 		symbol prevToken = currToken;
 		match(NUM);

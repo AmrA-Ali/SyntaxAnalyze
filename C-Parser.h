@@ -103,6 +103,9 @@ private:
 			left = new node(token2Str[l], nullptr, nullptr);
 			right = new node(token2Str[r], nullptr, nullptr);
 		}
+		node(string o, token l, node* r) : op(o), right(r) {
+			left = new node(token2Str[l], nullptr, nullptr);
+		}
 	};
 	node* root;
 	vector< vector<symbol> > tokens;
@@ -113,7 +116,8 @@ private:
 	/**** Procedures ***/
 	node* program();
 	node* declaration_list();
-	node* declaration();
+	node* declaration(bool);
+	node* dec_tail();
 	node* var_declaration();
 	node* var_tail();
 	node* type_specifier();
@@ -138,6 +142,7 @@ private:
 	node* term();
 	node* mulop();
 	node* factor();
+	node* fact_tail();
 	node* call();
 	node* args();
 	node* arg_list();
@@ -243,16 +248,16 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::declaration_list() {
 	return left;
 }
 
-SyntaxAnalyzer::node* SyntaxAnalyzer::declaration() {
+SyntaxAnalyzer::node* SyntaxAnalyzer::declaration(bool fndec = true) {
 	node* par = nullptr;
 	node* arg = nullptr;
 	if (check(nonTerm::type_specifier)) {
 		par = type_specifier();
 		par->left = new node(currToken.value, nullptr, nullptr);
 		match(ID);
-		if (check(nonTerm::var_declaration))
-			arg = var_declaration();
-		else arg = fun_declaration();
+		if(fndec)
+			arg = dec_tail();
+		else arg = var_declaration();
 		par->right = arg;
 	}
 	else {
@@ -260,6 +265,15 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::declaration() {
 	}
 	return par;
 }
+SyntaxAnalyzer::node* SyntaxAnalyzer::dec_tail()
+{
+	node* arg = nullptr;
+	if (check(nonTerm::var_declaration))
+		arg = var_declaration();
+	else arg = fun_declaration();
+	return arg;
+}
+
 //Kept for consistency
 SyntaxAnalyzer::node* SyntaxAnalyzer::var_declaration() {
 	node* left = var_tail();
@@ -333,8 +347,10 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::param_list() {
 }
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::param() {
-	symbol prevToken = currToken;
 	node* left = type_specifier();
+	symbol prevID = currToken;
+	if(prevID.tok == RB && left->op == token2Str[VOID])
+		return new node(token2Str[VOID], nullptr, nullptr);
 	match(ID);
 	node * right = nullptr;
 	if (currToken.tok == SLB) {
@@ -343,7 +359,7 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::param() {
 		right = new node("[]", nullptr, nullptr);
 
 	}
-	return new node(prevToken.value, right, nullptr);
+	return new node(left->op, new node(prevID.value,nullptr, nullptr), right);
 }
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::compound_stmt() {
@@ -356,19 +372,16 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::compound_stmt() {
 }
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::local_declarations() {
-	match(EMPTY);
 	node* left = nullptr;
-	while (check(nonTerm::var)) {
+	while (check(nonTerm::declaration)) {
 		token tok = currToken.tok;
-		left = var();
-		node* right = declaration();
-		left = new node(token2Str[tok], left, right);
+		left = declaration(false);
+		left = new node("endl", left, nullptr);
 	}
 	return left;
 }
 
 SyntaxAnalyzer::node* SyntaxAnalyzer::statement_list() {
-	match(EMPTY);
 	node* left = nullptr;
 	if (check(nonTerm::statement)) left = statement();
 
@@ -394,8 +407,9 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::statement() {
 SyntaxAnalyzer::node* SyntaxAnalyzer::expression_stmt() {
 	node* left = nullptr;
 	if (check(nonTerm::expression)) left = expression();
+	symbol prevToken = currToken;
 	match(SEMI_COLON);
-	return left;
+	return new node(prevToken.value,left,nullptr);
 }
 
 
@@ -442,10 +456,13 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::expression() {
 	node* left = nullptr;
 	if (currToken.tok == LET) {
 		match(LET);
+		symbol prevtoken = currToken;
+		match(ID);
 		left = var();
 		match(ASSIGN);
 		node* el = expression();
-		left = new node(token2Str[ASSIGN], left, el);
+		node* par = new node(token2Str[ASSIGN], new node("[]", new node(prevtoken.value,nullptr,nullptr) , left), el);
+		left = new node(token2Str[LET], par, nullptr);
 	}
 	else if (check(nonTerm::simple_expression)) {
 		left = simple_expression();
@@ -539,7 +556,7 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::factor() {
 		left = expression();
 		match(RB);
 	}; break;
-	case ID: if (check(nonTerm::call)) left = call(); else left = var(); break;
+	case ID: left = fact_tail(); break;
 	case NUM: {
 		symbol prevToken = currToken;
 		match(NUM);
@@ -550,6 +567,12 @@ SyntaxAnalyzer::node* SyntaxAnalyzer::factor() {
 	return left;
 }
 
+SyntaxAnalyzer::node* SyntaxAnalyzer::fact_tail()
+{
+	node* left = nullptr;
+	if (check(nonTerm::call)) left = call(); else left = var();
+	return left;
+}
 SyntaxAnalyzer::node* SyntaxAnalyzer::call() {
 	node* el = new node(currToken.value, nullptr, nullptr);
 	match(ID);

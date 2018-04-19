@@ -1,32 +1,32 @@
 1.program —> declaration-list
 2.declaration-list —> declaration { declaration }
-3.declaration —> var-declaration | fun-declaration
-4.var-declaration —> type-specifier ID var-tail
+3.declaration —> type-specifier ID dec_tail
+3.5 dec_tail -> var-declaration | fun-declaration
+4.var-declaration —> var-tail
 5.var-tail —> ; | [ NUM ]
 6.type-specifier —> int | void
-7.fun-declaration —> type-specifier ID ( params ) compound-stmt
+7.fun-declaration —> ( params ) compound-stmt
 8.params —> param-list | void
 9.param-list —> param {, param}
 10.param —> type-specifier ID [ [ ] ]
 11.compound-stmt —> { local-declarations statement-list }
-12.local-declarations —> empty { var declaration }
+12.local-declarations —> empty { var-declaration }
 13.statement-list —> empty { statement }
 14.statement —> expression-stmt | compound-stmt | selection-stmt | iteration-stmt | return-stmt
-
 15.expression-stmt —> [ expression ] ; 
-
 16.selection-stmt —> if (expression) statement [else statement]
 17.iteration-stmt —> while (expression) statement
 18.return-stmt —> return [expression] ;
-19.expression —> let var = expression | simple-expression
-20.var —> ID [ [expression] ] 
+19.expression —> let ID var = expression | simple-expression
+20.var —> [ [expression] ] 
 21.simple-expression —> additive-expression [relop additive-expression]
 22.relop —> <= | < | > | >= | == | !=
 23.additive-expression -> term {addop term} 
 24.addop —> + | -
 25.term —> factor { mulop factor}
 26.mulop —> * | /
-27.factor —> ( expression ) | var | call | NUM
-28.call —> ID ( args)
+27.factor —> ( expression ) | ID fact-tail | NUM
+27.5 fact-tail -> var | call
+28.call —> ( args)
 29.args —> args-list | empty
 30.arg-list —> expression {,expression}
